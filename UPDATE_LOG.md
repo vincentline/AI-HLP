@@ -52,3 +52,4 @@
 [2026-01-25 21:15:07] 【删除文件】: scripts/push-to-main.ps1 - 删除提交脚本，改为直接执行提交流程
 [2026-01-25 21:51:36] 【新增文件】: scripts/git-push.ps1 - 创建Git安全推送脚本，支持在任何目录下运行
 [2026-01-25 21:51:36] 【修改文件】: .trae/rules/project_rules.md - 更新项目规则，明确提交到GitHub的脚本使用方法
+[2026-01-25 22:10:24] 【修改文件】: scripts/start_server.py - 优化本地测试服务器，支持选择测试不同目录(desktop/static/figma)和自定义路径
