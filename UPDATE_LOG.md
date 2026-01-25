@@ -53,3 +53,26 @@
 [2026-01-25 21:51:36] 【新增文件】: scripts/git-push.ps1 - 创建Git安全推送脚本，支持在任何目录下运行
 [2026-01-25 21:51:36] 【修改文件】: .trae/rules/project_rules.md - 更新项目规则，明确提交到GitHub的脚本使用方法
 [2026-01-25 22:10:24] 【修改文件】: scripts/start_server.py - 优化本地测试服务器，支持选择测试不同目录(desktop/static/figma)和自定义路径
+[2026-01-25 23:24:00] 【修改文件】: apps/figma-plugin/package.json - 更新脚本命令，使用tsc替代figma-plugin-cli
+[2026-01-25 23:25:00] 【修改文件】: apps/figma-plugin/manifest.json - 更新插件配置，将main指向dist/main.js
+[2026-01-25 23:24:00] 【新增文件夹】: apps/figma-plugin/node_modules - 安装依赖包
+[2026-01-25 23:25:00] 【新增文件夹】: apps/figma-plugin/dist - 编译TypeScript代码生成的输出目录
+[2026-01-25 23:25:00] 【新增文件】: apps/figma-plugin/dist/main.js - 编译后的插件主逻辑文件
+[2026-01-25 23:30:00] 【修改文件】: apps/figma-plugin/src/ui.html - 更新UI界面，采用UI设计系统规范，添加自动命名功能
+[2026-01-25 23:35:00] 【修改文件】: apps/figma-plugin/src/main.ts - 实现自动命名功能，包括Frame结构获取、AI服务集成和命名应用
+[2026-01-25 23:40:00] 【新增文件】: apps/figma-plugin/src/config.ts - 创建配置管理模块，包含命名规范、案例和AI服务配置
+[2026-01-25 23:45:00] 【新增文件】: apps/figma-plugin/src/ai-service.ts - 实现AI服务集成，包括火山AI模型Doubao-Seed-1.8的调用逻辑
+[2026-01-25 23:50:00] 【修改文件】: apps/figma-plugin/src/main.ts - 修复编译错误，优化类型检查和节点处理逻辑
+[2026-01-26 02:00:00] 【修改文件】: apps/figma-plugin/src/ui.html - 添加API Key配置页面，修改按钮样式和布局
+[2026-01-26 02:05:00] 【修改文件】: apps/figma-plugin/src/main.ts - 更新AI服务调用逻辑，添加API Key管理功能
+[2026-01-26 02:10:00] 【删除文件】: apps/figma-plugin/src/ai-service.ts - 删除冗余的AI服务文件，功能合并到main.ts
+[2026-01-26 02:10:00] 【删除文件】: apps/figma-plugin/src/config.ts - 删除冗余的配置文件，功能合并到main.ts
+[2026-01-26 02:15:00] 【修改文件】: apps/figma-plugin/tsconfig.json - 优化TypeScript编译配置
+[2026-01-26 02:20:00] 【修改文件】: apps/figma-plugin/src/ui.html - 优化返回按钮样式，使用Material Design风格
+[2026-01-26 02:25:00] 【修改文件】: apps/figma-plugin/src/main.ts - 删除调试代码，优化代码结构
+[2026-01-26 02:30:00] 【修改文件】: apps/figma-plugin/src/main.ts - 更新火山API请求格式，使用正确的端点和参数
+[2026-01-26 02:35:00] 【修改文件】: apps/figma-plugin/src/main.ts - 添加API Key有效性测试功能
+[2026-01-26 02:40:00] 【修改文件】: apps/figma-plugin/src/ui.html - 添加API Key状态显示和测试按钮
+[2026-01-26 02:45:00] 【修改文件】: apps/figma-plugin/src/main.ts - 优化错误处理和用户反馈机制
+[2026-01-26 02:46:31] 【修改文件】: INDEX.md - 更新最后更新时间为当前北京时间
+[2026-01-26 02:46:31] 【修改文件】: UPDATE_LOG.md - 添加最近修改记录

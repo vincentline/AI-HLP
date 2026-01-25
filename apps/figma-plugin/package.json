@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "src/main.ts",
   "scripts": {
-    "build": "figma-plugin build",
-    "watch": "figma-plugin watch"
+    "build": "tsc",
+    "watch": "tsc --watch"
   },
   "dependencies": {
     "@figma/plugin-typings": "^1.0.0"

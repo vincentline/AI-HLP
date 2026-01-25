@@ -3,85 +3,436 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Figma Plugin</title>
+    <title>AI 自动命名工具</title>
     <style>
+        /* 设计令牌 */
+        :root {
+            /* 颜色系统 */
+            --primary-blue: #409eff;
+            --primary-gray: #5b5b5b;
+            --primary-red: #ff4444;
+            
+            /* 文字颜色 */
+            --text-primary: #333333;
+            --text-secondary: #818181;
+            --text-tertiary: #999999;
+            
+            /* 背景颜色 */
+            --bg-base: #fcfcfc;
+            --bg-elevated: #ffffff;
+            --bg-input: #F3F3F3;
+            --bg-hover: #F5F5F7;
+            --bg-active: #E8E8ED;
+            
+            /* 边框颜色 */
+            --border-light: #F3F3F3;
+            --border-base: #e3e3e3;
+            --border-medium: #CCCCCC;
+            
+            /* 字体系统 */
+            --font-family-base: 'Segoe UI', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-size-sm: 12px;
+            --font-size-base: 13px;
+            --font-size-md: 14px;
+            --font-size-lg: 16px;
+            
+            /* 间距系统 */
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            
+            /* 圆角系统 */
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            
+            /* 过渡动画 */
+            --transition-base: 0.2s ease;
+        }
+        
+        /* 基础样式 */
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            padding: 20px;
+            font-family: var(--font-family-base);
+            padding: var(--space-6);
             margin: 0;
-            background-color: white;
+            background-color: var(--bg-elevated);
+            color: var(--text-primary);
         }
+        
         h1 {
-            font-size: 18px;
-            margin-bottom: 20px;
-            color: #333;
+            font-size: var(--font-size-lg);
+            margin-bottom: var(--space-6);
+            color: var(--text-primary);
+            font-weight: 600;
         }
-        textarea {
+        
+        /* 输入框样式 */
+        .input-wrapper {
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0 var(--space-4);
             width: 100%;
-            min-height: 100px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            resize: vertical;
-            margin-bottom: 15px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #3498db;
-            color: white;
+            min-width: 200px;
+            height: 44px;
+            background: var(--bg-input);
             border: none;
-            border-radius: 4px;
-            font-size: 14px;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-base);
+            margin-bottom: var(--space-5);
+        }
+        
+        .input-wrapper:hover {
+            background: var(--bg-hover);
+            border: 1px solid var(--primary-gray);
+        }
+        
+        .input-wrapper:focus-within {
+            background: var(--bg-elevated);
+            border: 2px solid var(--primary-gray);
+            padding: 0 calc(var(--space-4) - 1px);
+        }
+        
+        .input-base {
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            border: none;
+            font-weight: 600;
+            font-size: var(--font-size-md);
+            color: var(--text-primary);
+            outline: none;
+        }
+        
+        .input-base::placeholder {
+            color: var(--text-tertiary);
+            font-weight: 400;
+        }
+        
+        /* 按钮样式 */
+        .btn-large-secondary {
+            height: 44px;
+            width: 100%;
+            padding: 0 20px;
+            border-radius: var(--radius-md);
+            background: var(--primary-gray);
+            border: 1px solid var(--primary-gray);
+            color: #ffffff;
+            font-size: var(--font-size-md);
             cursor: pointer;
-            margin-right: 10px;
-            transition: background-color 0.3s;
+            transition: all var(--transition-base);
         }
-        button:hover {
-            background-color: #2980b9;
+        
+        .btn-large-secondary:hover {
+            background: #6b6b6b;
         }
-        button.secondary {
-            background-color: #e0e0e0;
-            color: #333;
+        
+        .btn-large-secondary:active {
+            background: #4b4b4b;
         }
-        button.secondary:hover {
-            background-color: #bdbdbd;
+        
+        .btn-large-light {
+            height: 44px;
+            padding: 0 20px;
+            border-radius: var(--radius-md);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-base);
+            color: var(--text-primary);
+            font-size: var(--font-size-md);
+            cursor: pointer;
+            transition: all var(--transition-base);
         }
-        #result {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: #f5f5f5;
-            border-radius: 4px;
-            font-size: 14px;
+        
+        .btn-large-light:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-medium);
+        }
+        
+        .btn-large-light:active {
+            background: var(--bg-active);
+        }
+        
+        .btn-secondary {
+            height: 28px;
+            padding: 0 16px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            font-weight: 400;
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-medium);
+        }
+        
+        .btn-secondary:active {
+            background: var(--bg-active);
+        }
+        
+        /* Material Design 返回按钮样式 */
+        .material-btn-back {
+            height: 44px;
+            padding: 0 20px;
+            border-radius: var(--radius-md);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-base);
+            color: var(--text-primary);
+            font-size: var(--font-size-md);
+            cursor: pointer;
+            transition: all var(--transition-base);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .material-btn-back::before {
+            content: '←';
+            font-size: 16px;
+        }
+        
+        .material-btn-back:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-medium);
+        }
+        
+        .material-btn-back:active {
+            background: var(--bg-active);
+        }
+        
+        /* 按钮容器 */
+        .button-container {
+            display: flex;
+            gap: var(--space-3);
+            margin-bottom: var(--space-5);
+        }
+        
+        /* 页面样式 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* API Key输入页面样式 */
+        .api-key-page {
+            margin-top: var(--space-6);
+        }
+        
+        .api-key-input-wrapper {
+            margin-bottom: var(--space-5);
+        }
+        
+        /* Toast 消息样式 */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            pointer-events: none;
+        }
+        
+        .toast-message {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-sm);
+            padding: var(--space-3) var(--space-4);
+            font-size: var(--font-size-base);
+            color: var(--text-primary);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            white-space: nowrap;
+            max-width: 500px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .toast-message.show {
+            opacity: 1;
+        }
+        
+        /* 状态信息 */
+        .status-info {
+            font-size: var(--font-size-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-3);
         }
     </style>
 </head>
 <body>
-    <h1>AI 设计生成器</h1>
-    <textarea id="prompt" placeholder="请输入设计需求..."></textarea>
-    <div>
-        <button id="generate">生成设计</button>
-        <button id="close" class="secondary">关闭</button>
+    <!-- 主页面 -->
+    <div id="main-page" class="page active">
+        <h1>AI 自动命名工具</h1>
+        
+        <div class="status-info">选择一个 Frame 后，点击"马上重命名"按钮开始自动命名</div>
+        
+        <div class="input-wrapper">
+            <input type="text" id="prompt" class="input-base" placeholder="可输入自定义命名提示（可选）">
+        </div>
+        
+        
+        
+        <!-- API Key 切换按钮 -->
+        <div class="button-container">
+            <button id="open-api-key" class="btn-large-secondary">
+                <span id="api-key-status">配置 API Key</span>
+                <span id="api-key-check" style="display: none; margin-left: 8px; color: #67c23a;">✓</span>
+            </button>
+        </div>
+        
+        <!-- 主要按钮容器：关闭和马上重命名在同一行 -->
+        <div class="button-container">
+            <button id="close" class="btn-large-light" style="flex: 1;">关闭</button>
+            <button id="rename" class="btn-large-secondary" style="flex: 1;">马上重命名</button>
+        </div>
     </div>
-    <div id="result"></div>
+    
+    <!-- API Key 输入页面 -->
+    <div id="api-key-page" class="page">
+        <h1>配置 API Key</h1>
+        
+        <div class="status-info">请输入您的火山AI API Key</div>
+        
+        <div class="api-key-input-wrapper">
+            <div class="input-wrapper">
+                <input type="text" id="api-key" class="input-base" placeholder="请输入 API Key">
+            </div>
+        </div>
+        
+        <!-- 测试API Key按钮 -->
+        <div class="button-container">
+            <button id="test-api-key" class="btn-large-secondary" style="width: 100%;">测试 API Key</button>
+        </div>
+        
+        <div class="button-container">
+            <button id="back-to-main" class="material-btn-back" style="flex: 1;">返回</button>
+            <button id="save-api-key" class="btn-large-secondary" style="flex: 1;">确定</button>
+        </div>
+    </div>
+    
+    <!-- Toast 消息容器 -->
+    <div class="toast-container">
+        <div id="toast" class="toast-message"></div>
+    </div>
 
     <script>
-        document.getElementById('generate').addEventListener('click', () => {
+        // Toast 消息显示函数
+        function showToast(message, duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+        
+        // 页面切换函数
+        function switchPage(pageId) {
+            // 隐藏所有页面
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // 显示目标页面
+            document.getElementById(pageId).classList.add('active');
+        }
+        
+        // 重命名按钮点击事件
+        document.getElementById('rename').addEventListener('click', () => {
             const prompt = document.getElementById('prompt').value.trim();
-            if (prompt) {
-                parent.postMessage({ pluginMessage: { type: 'generate', prompt } }, '*');
-            }
+            parent.postMessage({ pluginMessage: { type: 'rename', prompt } }, '*');
+            showToast('正在分析和重命名...');
         });
 
+        // 关闭按钮点击事件
         document.getElementById('close').addEventListener('click', () => {
             parent.postMessage({ pluginMessage: { type: 'close' } }, '*');
         });
+        
+        // 打开API Key配置页面
+        document.getElementById('open-api-key').addEventListener('click', () => {
+            // 请求当前保存的API Key
+            parent.postMessage({ pluginMessage: { type: 'get-api-key' } }, '*');
+            switchPage('api-key-page');
+        });
+        
+        // 保存API Key
+        document.getElementById('save-api-key').addEventListener('click', () => {
+            const apiKey = document.getElementById('api-key').value.trim();
+            if (apiKey) {
+                parent.postMessage({ pluginMessage: { type: 'save-api-key', apiKey } }, '*');
+                showToast('API Key 已保存');
+                switchPage('main-page');
+            } else {
+                showToast('请输入有效的 API Key', 5000);
+            }
+        });
+        
+        // 返回主页面
+        document.getElementById('back-to-main').addEventListener('click', () => {
+            switchPage('main-page');
+        });
+        
+        // 测试API Key按钮点击事件
+        document.getElementById('test-api-key').addEventListener('click', () => {
+            const apiKey = document.getElementById('api-key').value.trim();
+            if (apiKey) {
+                // 先保存API Key
+                parent.postMessage({ pluginMessage: { type: 'save-api-key', apiKey } }, '*');
+                // 然后测试API Key
+                parent.postMessage({ pluginMessage: { type: 'test-api-key' } }, '*');
+                showToast('正在测试API Key...');
+            } else {
+                showToast('请先输入API Key', 5000);
+            }
+        });
 
+        // 更新API Key状态显示
+        function updateApiKeyStatus(apiKey) {
+            const statusText = document.getElementById('api-key-status');
+            const checkMark = document.getElementById('api-key-check');
+            
+            if (apiKey) {
+                statusText.textContent = 'API Key 已配置';
+                checkMark.style.display = 'inline';
+            } else {
+                statusText.textContent = '配置 API Key';
+                checkMark.style.display = 'none';
+            }
+        }
+        
         // 接收来自主进程的消息
         window.onmessage = (event) => {
             const message = event.data.pluginMessage;
-            if (message && message.type === 'generated') {
-                document.getElementById('result').textContent = message.message;
+            if (message) {
+                if (message.type === 'renameComplete') {
+                    showToast(`成功命名 ${message.successCount} 个元素`);
+                } else if (message.type === 'error') {
+                    showToast(`错误：${message.message}`, 5000);
+                } else if (message.type === 'api-key') {
+                    // 设置API Key输入框的值
+                    document.getElementById('api-key').value = message.apiKey || '';
+                    // 更新API Key状态显示
+                    updateApiKeyStatus(message.apiKey);
+                } else if (message.type === 'api-key-valid') {
+                    showToast('API Key 有效', 5000);
+                } else if (message.type === 'api-key-invalid') {
+                    showToast('API Key 无效，请检查后重试', 5000);
+                }
             }
         };
     </script>

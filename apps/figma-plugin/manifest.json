@@ -2,6 +2,7 @@
   "name": "AI Figma Plugin",
   "id": "com.ai.figma-plugin",
   "api": "1.0.0",
-  "main": "src/main.ts",
-  "ui": "src/ui.html"
+  "main": "dist/main.js",
+  "ui": "src/ui.html",
+  "editorType": ["figma"]
 }
