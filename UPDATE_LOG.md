@@ -49,3 +49,4 @@
 [2026-01-25 07:10:00] 【新增文件】: GET_TIME.md - 创建精简版获取时间指南，文件名改为GET_TIME.md
 [2026-01-25 07:10:00] 【修改文件】: INDEX.md - 将获取时间指南.md改为GET_TIME.md
 [2026-01-25 20:43:03] 【新增文件】: scripts/push-to-main.ps1 - 创建提交到GitHub main分支的PowerShell脚本
+[2026-01-25 21:15:07] 【删除文件】: scripts/push-to-main.ps1 - 删除提交脚本，改为直接执行提交流程
