@@ -1,126 +1,91 @@
-# Git 安全推送脚本 - 自动避免分叉
-# 使用方法：右键选择"使用PowerShell运行"或在终端运行：PowerShell.exe -ExecutionPolicy Bypass -File git-push.ps1
+# Git Safe Push Script - Simplified Version
+# Avoids Chinese path encoding issues by not using Set-Location
+# Ignores Git warnings about line endings
 
-$ErrorActionPreference = 'Stop'
+# Temporarily disable error stopping for the entire script
+$ErrorActionPreference = 'Continue'
 
-# 获取git仓库根目录，确保在仓库根目录执行操作
-$gitRoot = git rev-parse --show-toplevel 2>$null
-if (-not $gitRoot) {
-    Write-Host "错误：当前目录不是git仓库" -ForegroundColor Red
+Write-Host "==== Git Safe Push ====" -ForegroundColor Cyan
+
+# 0. Check current branch
+Write-Host "`n0. Checking current branch..." -ForegroundColor Yellow
+$currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+if (-not $currentBranch) {
+    Write-Host "Error: Not in a git repository" -ForegroundColor Red
     exit 1
 }
-Set-Location $gitRoot
-
-# 解决 schannel: failed to receive handshake 报错
-# 强制当前仓库使用 openssl 后端
-git config http.sslBackend openssl
-
-Write-Host "==== Git 安全推送 ====" -ForegroundColor Cyan
-
-# 0. 检查当前分支
-Write-Host "`n0. 检查当前分支..." -ForegroundColor Yellow
-$currentBranch = git rev-parse --abbrev-ref HEAD
-Write-Host "当前分支: $currentBranch" -ForegroundColor Green
+Write-Host "Current branch: $currentBranch" -ForegroundColor Green
 
 if ($currentBranch -ne "main") {
-    Write-Host "警告: 当前不在main分支，自动切换到main分支" -ForegroundColor Red
-    git checkout main
+    Write-Host "Warning: Not on main branch, automatically switching to main branch" -ForegroundColor Red
+    git checkout main 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "切换分支失败" -ForegroundColor Red
+        Write-Host "Failed to switch branch" -ForegroundColor Red
         exit 1
     }
+    $currentBranch = "main"
 }
 
-# 1. 检查是否有修改
-Write-Host "`n1. 检查本地修改..." -ForegroundColor Yellow
-$status = git status --short
+# 1. Check for changes
+Write-Host "`n1. Checking local changes..." -ForegroundColor Yellow
+$status = git status --short 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error running git status" -ForegroundColor Red
+    exit 1
+}
+
 if ([string]::IsNullOrWhiteSpace($status)) {
-    Write-Host "没有需要提交的修改" -ForegroundColor Green
+    Write-Host "No changes to commit" -ForegroundColor Green
     exit 0
 }
 
-Write-Host "发现以下修改：" -ForegroundColor Green
-git status --short
+Write-Host "Found changes:" -ForegroundColor Green
+Write-Host $status
 
-# 2. 添加所有修改
-Write-Host "`n2. 添加所有修改..." -ForegroundColor Yellow
-git add -A
+# 2. Add all changes
+Write-Host "`n2. Adding all changes..." -ForegroundColor Yellow
+# Ignore warnings about line endings by redirecting stderr to stdout and filtering out warnings
+git add -A 2>&1 | ForEach-Object { $_ } | Where-Object { $_ -notmatch 'warning:.*LF will be replaced by CRLF' } | Out-Null
+# Check the exit code manually
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "添加文件失败" -ForegroundColor Red
+    Write-Host "Failed to add files" -ForegroundColor Red
     exit 1
 }
 
-# 3. 提交（如果需要）
-# 自动生成提交信息
-Write-Host "`n3. 自动生成提交信息..." -ForegroundColor Yellow
+# 3. Generate commit message
+Write-Host "`n3. Generating commit message..." -ForegroundColor Yellow
+$commitMsg = "Auto update - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
+Write-Host "Commit message: $commitMsg" -ForegroundColor Green
 
-# 获取变更的文件列表
-$changedFiles = git status --short
-$fileList = @()
-
-foreach ($file in $changedFiles) {
-    $trimmed = $file.Trim()
-    $parts = $trimmed.Split(' ')
-    if ($parts.Length -gt 1) {
-        $fileList += $parts[1]
-    }
-}
-
-$fileList = $fileList -join ', '
-
-if ([string]::IsNullOrWhiteSpace($fileList)) {
-    $fileList = "未检测到具体文件变更"
-}
-
-# 生成提交信息
-$commitMsg = "自动更新: $fileList - $(Get-Date -Format 'yyyy-MM-dd HH:mm')"
-
-Write-Host "提交信息: $commitMsg" -ForegroundColor Green
-git commit -m $commitMsg
+# 4. Commit
+Write-Host "`n4. Committing changes..." -ForegroundColor Yellow
+git commit -m $commitMsg 2>&1 | ForEach-Object { $_ } | Where-Object { $_ -notmatch 'warning:.*LF will be replaced by CRLF' } | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "提交失败" -ForegroundColor Red
+    Write-Host "Failed to commit" -ForegroundColor Red
     exit 1
 }
 
-# 4. 先拉取远程更改（关键步骤！避免分叉）
-Write-Host "`n4. 拉取远程更改（避免分叉）..." -ForegroundColor Yellow
-
-# 重试机制：应对后台Git进程占用文件锁
-$maxRetries = 3
-$retryCount = 0
+# 5. Pull (with retry)
+Write-Host "`n5. Pulling remote changes..." -ForegroundColor Yellow
 $pullSuccess = $false
-
-# 临时关闭错误停止，让重试逻辑能正常工作
-$ErrorActionPreference = 'Continue'
-
-while (-not $pullSuccess -and $retryCount -lt $maxRetries) {
-    $output = git pull --no-rebase origin main 2>&1
+for ($i = 0; $i -lt 3; $i++) {
+    git pull --no-rebase origin main 2>&1 | Out-Null
     if ($LASTEXITCODE -eq 0) {
         $pullSuccess = $true
-        Write-Host "拉取成功" -ForegroundColor Green
-    } else {
-        $retryCount++
-        if ($retryCount -lt $maxRetries) {
-            Write-Host "文件被占用，等待3秒后重试... ($retryCount/$maxRetries)" -ForegroundColor Yellow
-            Start-Sleep -Seconds 3
-        }
+        Write-Host "Pull successful" -ForegroundColor Green
+        break
     }
+    Write-Host "Pull attempt $($i+1) failed, retrying in 2 seconds..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 2
 }
 
-# 恢复错误停止
-$ErrorActionPreference = 'Stop'
-
-if (-not $pullSuccess) {
-    Write-Host "拉取失败，尝试直接推送..." -ForegroundColor Yellow
-}
-
-# 5. 推送
-Write-Host "`n5. 推送到远程..." -ForegroundColor Yellow
-git push origin main
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "推送失败" -ForegroundColor Red
+# 6. Push
+Write-Host "`n6. Pushing to remote..." -ForegroundColor Yellow
+git push origin main 2>&1 | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "`n==== Done! ====" -ForegroundColor Green
+    Write-Host "Code pushed to GitHub successfully" -ForegroundColor Green
+} else {
+    Write-Host "`nPush failed" -ForegroundColor Red
     exit 1
 }
-
-Write-Host "`n==== 完成！ ====" -ForegroundColor Green
-Write-Host "代码已安全推送到GitHub" -ForegroundColor Green
