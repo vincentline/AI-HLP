@@ -50,3 +50,5 @@
 [2026-01-25 07:10:00] 【修改文件】: INDEX.md - 将获取时间指南.md改为GET_TIME.md
 [2026-01-25 20:43:03] 【新增文件】: scripts/push-to-main.ps1 - 创建提交到GitHub main分支的PowerShell脚本
 [2026-01-25 21:15:07] 【删除文件】: scripts/push-to-main.ps1 - 删除提交脚本，改为直接执行提交流程
+[2026-01-25 21:51:36] 【新增文件】: scripts/git-push.ps1 - 创建Git安全推送脚本，支持在任何目录下运行
+[2026-01-25 21:51:36] 【修改文件】: .trae/rules/project_rules.md - 更新项目规则，明确提交到GitHub的脚本使用方法
