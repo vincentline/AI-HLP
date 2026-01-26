@@ -301,8 +301,8 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
           element.textContent = textNode.characters;
           element.fontSize = textNode.fontSize;
           element.style = {
-            fontFamily: textNode.fontName?.family || '',
-            fontStyle: textNode.fontName?.style || '',
+            fontFamily: typeof textNode.fontName === 'object' ? textNode.fontName?.family || '' : '',
+            fontStyle: typeof textNode.fontName === 'object' ? textNode.fontName?.style || '' : '',
             fontSize: textNode.fontSize,
             textAlignHorizontal: textNode.textAlignHorizontal,
             textAlignVertical: textNode.textAlignVertical,
