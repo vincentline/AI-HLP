@@ -17,6 +17,7 @@ def run_cmd(cmd, cwd=None):
             shell=True, 
             capture_output=True, 
             text=True, 
+            encoding='utf-8',
             cwd=cwd
         )
         return result.returncode, result.stdout.strip(), result.stderr.strip()
