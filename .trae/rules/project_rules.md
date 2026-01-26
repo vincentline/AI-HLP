@@ -9,7 +9,7 @@
 
 # 项目规则
 1. 如需提交变更到 GitHub 时：
-   - 执行：`PowerShell.exe -ExecutionPolicy Bypass -File scripts/git-push.ps1`
+   - 执行：`python scripts/git-push.py`
 2. 本地测试服务器使用方法：
    - 基本用法：`python scripts/start_server.py`
    - 选择测试目录：`python scripts/start_server.py -d <目录>`
