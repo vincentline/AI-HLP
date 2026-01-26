@@ -145,11 +145,14 @@ const namingConfig = {
 const aiConfig = {
   // 火山AI模型配置
   huoshan: {
-    model: 'doubao-seed-1-8-251228',
-    endpoint: 'https://ark.cn-beijing.volces.com/api/v3/responses',
+    model: 'doubao-1-5-pro-32k-250115',
+    endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
     apiKey: '', // 从Figma客户端存储获取
     version: 'v1'
   },
+  
+  // 系统提示词
+  systemPrompt: `任务：根据输入的'画框信息数组'，按照指定格式生成对应的'命名数组'。输入：包含 Figma 画框详细信息的'画框信息数组'，以及命名格式规则'命名格式规则'。输出：符合'命名格式规则'的'命名数组'，数组长度与输入数组一致，每个元素为对应画框的命名结果。范例：'画框信息数组a'→'命名数组a'`,
   
   // 提示词模板
   promptTemplate: `你是一位专业的UI设计师，擅长为Figma设计元素制定规范的命名。
@@ -256,40 +259,57 @@ function getSelectedFrame(): FrameNode | null {
 function getFrameStructure(frame: FrameNode): any {
   return {
     frameName: frame.name,
+    originalName: frame.name, // 保留原来的画框名称
     width: frame.width,
     height: frame.height,
-    elements: getElements(frame)
+    elements: getElements(frame, 0)
   };
 }
 
 /**
  * 递归获取元素列表
  * @param {SceneNode} parentNode - 父节点
+ * @param {number} depth - 元素层级深度
  * @returns {Array} 元素列表
  */
-function getElements(parentNode: SceneNode): any[] {
+function getElements(parentNode: SceneNode, depth: number = 0): any[] {
   const elements: any[] = [];
   
   // 检查节点是否有children属性
   if ('children' in parentNode) {
     // 遍历子节点
-    parentNode.children.forEach((child: SceneNode) => {
+    parentNode.children.forEach((child: SceneNode, index: number) => {
       // 提取元素基本信息
       const element: any = {
         id: child.id,
         type: child.type,
+        originalName: child.name, // 保留原来的元素名称
         name: child.name,
         width: child.width || 0,
         height: child.height || 0,
         x: child.x || 0,
-        y: child.y || 0
+        y: child.y || 0,
+        depth: depth, // 元素层级深度
+        index: index, // 同级元素中的索引位置
+        style: {} // 样式信息
       };
       
-      // 根据元素类型提取额外信息
+      // 根据元素类型提取额外信息和样式
       switch (child.type) {
         case 'TEXT':
-          element.textContent = (child as TextNode).characters;
-          element.fontSize = (child as TextNode).fontSize;
+          const textNode = child as TextNode;
+          element.textContent = textNode.characters;
+          element.fontSize = textNode.fontSize;
+          element.style = {
+            fontFamily: textNode.fontName?.family || '',
+            fontStyle: textNode.fontName?.style || '',
+            fontSize: textNode.fontSize,
+            textAlignHorizontal: textNode.textAlignHorizontal,
+            textAlignVertical: textNode.textAlignVertical,
+            fills: textNode.fills,
+            opacity: textNode.opacity,
+            blendMode: textNode.blendMode
+          };
           break;
         
         case 'RECTANGLE':
@@ -297,21 +317,35 @@ function getElements(parentNode: SceneNode): any[] {
         case 'POLYGON':
         case 'STAR':
         case 'VECTOR':
-          // 提取填充颜色信息
           const shapeNode = child as VectorNode | RectangleNode | EllipseNode | PolygonNode | StarNode;
+          // 提取填充颜色信息
           if (Array.isArray(shapeNode.fills) && shapeNode.fills.length > 0) {
-            const fill = shapeNode.fills[0];
-            if (fill.type === 'SOLID') {
-              element.fillColor = fill.color;
-            }
+            element.fillColor = shapeNode.fills[0].type === 'SOLID' ? shapeNode.fills[0].color : null;
           }
+          // 提取样式信息
+          element.style = {
+            fills: shapeNode.fills,
+            strokes: shapeNode.strokes,
+            strokeWeight: shapeNode.strokeWeight,
+            strokeAlign: shapeNode.strokeAlign,
+            cornerRadius: 'cornerRadius' in shapeNode ? shapeNode.cornerRadius : null,
+            opacity: shapeNode.opacity,
+            blendMode: shapeNode.blendMode
+          };
           break;
         
         case 'FRAME':
         case 'COMPONENT':
         case 'INSTANCE':
+          // 提取样式信息
+          element.style = {
+            backgroundColor: 'backgroundColor' in child ? child.backgroundColor : null,
+            clipsContent: 'clipsContent' in child ? child.clipsContent : false,
+            opacity: child.opacity,
+            blendMode: child.blendMode
+          };
           // 递归处理嵌套frame和组件
-          element.children = getElements(child);
+          element.children = getElements(child, depth + 1);
           break;
       }
       
@@ -376,15 +410,14 @@ async function testApiKey(): Promise<boolean> {
     // 构建测试请求体
     const requestBody = {
       model: model,
-      input: [
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant."
+        },
         {
           role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: "测试API Key有效性"
-            }
-          ]
+          content: "测试API Key有效性"
         }
       ]
     };
@@ -425,15 +458,14 @@ async function callAIService(prompt: string): Promise<any> {
     // 构建请求体
     const requestBody = {
       model: model,
-      input: [
+      messages: [
+        {
+          role: "system",
+          content: aiConfig.systemPrompt
+        },
         {
           role: "user",
-          content: [
-            {
-              type: "input_text",
-              text: prompt
-            }
-          ]
+          content: prompt
         }
       ]
     };
@@ -458,7 +490,7 @@ async function callAIService(prompt: string): Promise<any> {
     const responseData = await response.json();
     
     // 提取AI生成的内容
-    const aiContent = responseData.output?.choices?.[0]?.content;
+    const aiContent = responseData.choices?.[0]?.message?.content;
     if (!aiContent) {
       throw new Error('AI响应格式不正确');
     }

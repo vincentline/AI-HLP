@@ -53,6 +53,11 @@
 [2026-01-25 21:51:36] 【新增文件】: scripts/git-push.ps1 - 创建Git安全推送脚本，支持在任何目录下运行
 [2026-01-25 21:51:36] 【修改文件】: .trae/rules/project_rules.md - 更新项目规则，明确提交到GitHub的脚本使用方法
 [2026-01-25 22:10:24] 【修改文件】: scripts/start_server.py - 优化本地测试服务器，支持选择测试不同目录(desktop/static/figma)和自定义路径
+[2026-01-27 04:10:00] 【修改文件】: apps/figma-plugin/src/main.ts - 将API Key改回空字符串，恢复用户输入方式，避免API Key泄露风险
+[2026-01-27 03:54:46] 【修改文件】: .trae/documents/FIGMA_PLUGIN_PRODUCT_DOC.md - 将文档中的"MeeWoo"名称替换为正确的项目名称"AI-HLP"
+[2026-01-27 03:45:54] 【修改文件】: .trae/documents/FIGMA_PLUGIN_PRODUCT_DOC.md - 更新API集成部分，修改为新的API格式和传输内容
+[2026-01-27 03:45:54] 【修改文件】: apps/figma-plugin/src/main.ts - 更新AI服务配置和API调用方式，使用新的messages格式
+[2026-01-27 03:40:34] 【新增文件】: docs/FIGMA_PLUGIN_PRODUCT_DOC.md - 创建Figma自动命名插件产品文档，详细梳理了产品概述、核心功能、用户流程、技术实现、命名规范、API集成、错误处理和未来规划等内容
 [2026-01-27 15:00:00] 【新增文件】: scripts/git-push.py - 创建Git推送Python脚本，避免PowerShell编码问题
 [2026-01-27 15:00:00] 【删除文件】: scripts/git-push.ps1 - 删除有编码问题的PowerShell脚本
 [2026-01-27 15:00:00] 【删除文件】: scripts/git-push-simple.ps1 - 删除测试用的PowerShell脚本
