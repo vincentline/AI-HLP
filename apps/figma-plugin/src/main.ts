@@ -2,7 +2,7 @@
 // 模块功能：处理Figma插件的核心逻辑，包括UI显示、消息通信和自动命名
 // 技术栈：TypeScript、Figma Plugin API
 
-// 使用@figma/plugin-typings提供的类型定义
+// 使用@figma/plugin-typings提供的类 型定义
 
 // 显示插件UI界面
 figma.showUI(__html__, {
