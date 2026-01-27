@@ -223,12 +223,12 @@ const aiConfig = {
  */
 async function autoRename(customPrompt: string) {
   try {
-    // 检查用户是否选中了frame
-    const selectedFrame = getSelectedFrame();
-    if (!selectedFrame) {
+    // 检查用户是否选中了支持的主体元素
+    const selectedElement = getSelectedElement();
+    if (!selectedElement) {
       figma.ui.postMessage({ 
         type: 'error', 
-        message: '请先选择一个Frame' 
+        message: '请先选择一个Frame、Component、Component Set或Group' 
       });
       return;
     }
@@ -238,8 +238,8 @@ async function autoRename(customPrompt: string) {
       return;
     }
     
-    // 获取frame结构数据
-    const frameData = getFrameStructure(selectedFrame);
+    // 获取元素结构数据
+    const elementData = getElementStructure(selectedElement);
     
     // 检查是否已取消
     if (isCancelled) {
@@ -247,7 +247,7 @@ async function autoRename(customPrompt: string) {
     }
     
     // 构建提示词
-    const prompt = buildPrompt(frameData, customPrompt);
+    const prompt = buildPrompt(elementData, customPrompt);
     
     // 检查是否已取消
     if (isCancelled) {
@@ -263,7 +263,7 @@ async function autoRename(customPrompt: string) {
     }
     
     // 应用命名建议
-    const successCount = applyNamingSuggestions(selectedFrame, namingSuggestions);
+    const successCount = applyNamingSuggestions(selectedElement, namingSuggestions);
     
     // 检查是否已取消
     if (isCancelled) {
@@ -287,37 +287,121 @@ async function autoRename(customPrompt: string) {
 }
 
 /**
- * 获取用户选中的Frame
- * @returns {FrameNode | null} 选中的Frame节点
+ * 获取用户选中的主体元素
+ * @returns {SceneNode | null} 选中的主体元素节点
  */
-function getSelectedFrame(): FrameNode | null {
+function getSelectedElement(): SceneNode | null {
   // 检查是否只有一个选中元素
   if (figma.currentPage.selection.length !== 1) {
     return null;
   }
   
-  // 检查选中元素是否为Frame
+  // 检查选中元素是否为支持的主体元素类型
   const selectedNode = figma.currentPage.selection[0];
-  if (selectedNode.type === 'FRAME') {
-    return selectedNode as FrameNode;
+  const supportedTypes = ['FRAME', 'COMPONENT', 'COMPONENT_SET', 'GROUP'];
+  if (supportedTypes.includes(selectedNode.type)) {
+    return selectedNode;
   }
   
   return null;
 }
 
 /**
- * 获取Frame的结构数据
- * @param {FrameNode} frame - Frame节点
- * @returns {Object} 包含Frame结构的对象
+ * 获取元素的结构数据
+ * @param {SceneNode} element - 主体元素节点
+ * @returns {Object} 包含元素结构的对象
  */
-function getFrameStructure(frame: FrameNode): any {
+function getElementStructure(element: SceneNode): any {
   return {
-    frameName: frame.name,
-    originalName: frame.name, // 保留原来的画框名称
-    width: frame.width,
-    height: frame.height,
-    elements: getElements(frame, 0)
+    elementName: element.name,
+    originalName: element.name, // 保留原来的元素名称
+    type: element.type,
+    width: element.width,
+    height: element.height,
+    elements: getElements(element, 0)
   };
+}
+
+/**
+ * 检查元素是否应被排除
+ * @param {SceneNode} node - 要检查的节点
+ * @returns {boolean} 是否应被排除
+ */
+function isElementExcluded(node: SceneNode): boolean {
+  // 检查隐藏状态
+  if ('visible' in node && !node.visible) {
+    return true;
+  }
+  
+  // 检查蒙版状态
+  if ('isMask' in node && node.isMask) {
+    return true;
+  }
+  
+  // 检查导出状态
+  if ('exportSettings' in node && node.exportSettings && node.exportSettings.length > 0) {
+    return true;
+  }
+  
+  // 检查组件/组件集类型
+  if (node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * 获取元素的基础数据
+ * @param {SceneNode} node - 元素节点
+ * @returns {Object} 基础数据对象
+ */
+function getBasicElementData(node: SceneNode): any {
+  const basicData: any = {
+    id: node.id,
+    type: node.type,
+    originalName: node.name,
+    name: node.name,
+    width: node.width || 0,
+    height: node.height || 0,
+    x: node.x || 0,
+    y: node.y || 0,
+    opacity: 'opacity' in node ? node.opacity : 1
+  };
+  
+  // 添加约束规则
+  if ('constraints' in node) {
+    basicData.constraints = node.constraints;
+  }
+  
+  // 添加旋转角度
+  if ('rotation' in node) {
+    basicData.rotation = node.rotation;
+  }
+  
+  // 添加圆角属性
+  if ('cornerRadius' in node) {
+    basicData.cornerRadius = node.cornerRadius;
+  }
+  
+  // 添加填充信息
+  if ('fills' in node) {
+    basicData.fills = node.fills;
+  }
+  
+  // 添加描边信息
+  if ('strokes' in node) {
+    basicData.strokes = node.strokes;
+    basicData.strokeWeight = node.strokeWeight;
+    basicData.strokeAlign = node.strokeAlign;
+  }
+  
+  // 添加效果属性
+  if ('effects' in node) {
+    basicData.effects = node.effects;
+  }
+  
+  return basicData;
 }
 
 /**
@@ -333,37 +417,31 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
   if ('children' in parentNode) {
     // 遍历子节点
     parentNode.children.forEach((child: SceneNode, index: number) => {
-      // 检查元素透明度是否为0
-      const hasOpacity = 'opacity' in child;
-      if (hasOpacity && child.opacity === 0) {
-        // 透明度为0的元素，不获取该节点及其子节点的任何信息
+      // 检查元素是否应被排除
+      if (isElementExcluded(child)) {
         return;
       }
       
-      // 检查元素是否有导出信息
-      const hasExportInfo = 'exportSettings' in child && child.exportSettings && child.exportSettings.length > 0;
+      let element: any;
       
-      // 提取元素基本信息
-      const element: any = {
-        id: child.id,
-        type: child.type,
-        originalName: child.name, // 保留原来的元素名称
-        name: child.name,
-        width: child.width || 0,
-        height: child.height || 0,
-        x: child.x || 0,
-        y: child.y || 0,
-        depth: depth, // 元素层级深度
-        index: index, // 同级元素中的索引位置
-        hasExportInfo: hasExportInfo,
-        hasOpacity: hasOpacity,
-        opacity: hasOpacity ? child.opacity : 1, // 默认不透明
-        style: {} // 样式信息
-      };
-      
-      // 根据元素类型提取额外信息和样式
+      // 根据元素类型获取不同级别的数据
       switch (child.type) {
         case 'TEXT':
+          // 文本：完整获取
+          element = {
+            id: child.id,
+            type: child.type,
+            originalName: child.name,
+            name: child.name,
+            width: child.width || 0,
+            height: child.height || 0,
+            x: child.x || 0,
+            y: child.y || 0,
+            depth: depth,
+            index: index,
+            opacity: 'opacity' in child ? child.opacity : 1
+          };
+          
           const textNode = child as TextNode;
           element.textContent = textNode.characters.length > 100 ? textNode.characters.substring(0, 100) + '...' : textNode.characters;
           element.fontSize = textNode.fontSize;
@@ -377,44 +455,121 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
             opacity: textNode.opacity,
             blendMode: textNode.blendMode
           };
+          
+          // 递归处理子节点
+          if ('children' in child) {
+            element.children = getElements(child, depth + 1);
+          }
           break;
-        
+          
+        case 'FRAME':
+        case 'GROUP':
+          // 画框/分组：完整获取
+          element = {
+            id: child.id,
+            type: child.type,
+            originalName: child.name,
+            name: child.name,
+            width: child.width || 0,
+            height: child.height || 0,
+            x: child.x || 0,
+            y: child.y || 0,
+            depth: depth,
+            index: index,
+            opacity: 'opacity' in child ? child.opacity : 1
+          };
+          
+          // 添加样式信息
+          if ('backgroundColor' in child) {
+            element.style = {
+              backgroundColor: child.backgroundColor,
+              clipsContent: 'clipsContent' in child ? child.clipsContent : false,
+              opacity: child.opacity,
+              blendMode: child.blendMode
+            };
+          }
+          
+          // 递归处理子节点
+          if ('children' in child) {
+            element.children = getElements(child, depth + 1);
+          }
+          break;
+          
+        case 'INSTANCE':
+          // 实例：完整获取但标记不参与命名
+          element = {
+            id: child.id,
+            type: child.type,
+            originalName: child.name,
+            name: child.name,
+            width: child.width || 0,
+            height: child.height || 0,
+            x: child.x || 0,
+            y: child.y || 0,
+            depth: depth,
+            index: index,
+            opacity: 'opacity' in child ? child.opacity : 1,
+            excludeFromNaming: true // 标记实例不参与命名
+          };
+          
+          // 添加样式信息
+          if ('backgroundColor' in child) {
+            element.style = {
+              backgroundColor: child.backgroundColor,
+              clipsContent: 'clipsContent' in child ? child.clipsContent : false,
+              opacity: child.opacity,
+              blendMode: child.blendMode
+            };
+          }
+          
+          // 递归处理子节点
+          if ('children' in child) {
+            element.children = getElements(child, depth + 1);
+          }
+          break;
+          
         case 'RECTANGLE':
         case 'ELLIPSE':
         case 'POLYGON':
         case 'STAR':
         case 'VECTOR':
-          const shapeNode = child as VectorNode | RectangleNode | EllipseNode | PolygonNode | StarNode;
-          if (Array.isArray(shapeNode.fills) && shapeNode.fills.length > 0) {
-            element.fillColor = shapeNode.fills[0].type === 'SOLID' ? shapeNode.fills[0].color : null;
+          // 矢量图形：仅获取基础数据
+          element = getBasicElementData(child);
+          element.depth = depth;
+          element.index = index;
+          break;
+          
+        case 'LINE':
+        case 'CONNECTOR':
+        case 'WIDGET':
+        case 'EMBED':
+          // 媒体与嵌入式元素：仅获取基础数据
+          element = getBasicElementData(child);
+          element.depth = depth;
+          element.index = index;
+          break;
+          
+        default:
+          // 其他类型元素：完整获取
+          element = {
+            id: child.id,
+            type: child.type,
+            originalName: child.name,
+            name: child.name,
+            width: child.width || 0,
+            height: child.height || 0,
+            x: child.x || 0,
+            y: child.y || 0,
+            depth: depth,
+            index: index,
+            opacity: 'opacity' in child ? child.opacity : 1
+          };
+          
+          // 递归处理子节点
+          if ('children' in child) {
+            element.children = getElements(child, depth + 1);
           }
-          element.style = {
-            fills: shapeNode.fills,
-            strokes: shapeNode.strokes,
-            strokeWeight: shapeNode.strokeWeight,
-            strokeAlign: shapeNode.strokeAlign,
-            cornerRadius: 'cornerRadius' in shapeNode ? shapeNode.cornerRadius : null,
-            opacity: shapeNode.opacity,
-            blendMode: shapeNode.blendMode
-          };
           break;
-        
-        case 'FRAME':
-        case 'COMPONENT':
-        case 'INSTANCE':
-          element.style = {
-            backgroundColor: 'backgroundColor' in child ? child.backgroundColor : null,
-            clipsContent: 'clipsContent' in child ? child.clipsContent : false,
-            opacity: child.opacity,
-            blendMode: child.blendMode
-          };
-          break;
-      }
-      
-      // 如果元素没有导出信息，并且不是透明度为0的元素，递归处理子节点
-      if (!hasExportInfo && (hasOpacity ? child.opacity > 0 : true) && 'children' in child) {
-        // 递归处理所有子节点，包括组件内部
-        element.children = getElements(child, depth + 1);
       }
       
       // 添加到元素列表
@@ -607,16 +762,16 @@ function generateMockNamingSuggestions(): any {
 
 /**
  * 应用命名建议
- * @param {FrameNode} frame - Frame节点
+ * @param {SceneNode} element - 主体元素节点
  * @param {Object} namingSuggestions - 命名建议
  * @returns {number} 成功命名的元素数量
  */
-function applyNamingSuggestions(frame: FrameNode, namingSuggestions: any): number {
+function applyNamingSuggestions(element: SceneNode, namingSuggestions: any): number {
   let successCount = 0;
   
   // 递归应用命名建议
   function applyToNode(node: any) {
-    // 检查节点是否在命名建议中，并且不是组件类型
+    // 检查节点是否在命名建议中，并且不是组件类型，也不是实例或标记为不参与命名的元素
     if (namingSuggestions[node.id] && node.type !== 'COMPONENT' && node.type !== 'INSTANCE') {
       // 更新节点名称
       node.name = namingSuggestions[node.id];
@@ -631,8 +786,8 @@ function applyNamingSuggestions(frame: FrameNode, namingSuggestions: any): numbe
     }
   }
   
-  // 从frame开始递归应用命名建议
-  applyToNode(frame);
+  // 从元素开始递归应用命名建议
+  applyToNode(element);
   
   return successCount;
 }
