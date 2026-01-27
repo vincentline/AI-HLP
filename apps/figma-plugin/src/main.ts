@@ -507,10 +507,6 @@ async function testApiKey(): Promise<boolean> {
     }
     
     const responseData = await response.json();
-    // 处理思维链内容
-    if (responseData.choices[0].message.reasoning_content) {
-      console.log('模型思考过程:', responseData.choices[0].message.reasoning_content);
-    }
     return true;
   } catch (error: any) {
     console.error('网络请求错误:', error.message);
@@ -565,10 +561,6 @@ async function callAIService(prompt: string): Promise<any> {
     }
     
     const responseData = await response.json();
-    // 处理思维链内容
-    if (responseData.choices[0].message.reasoning_content) {
-      console.log('模型思考过程:', responseData.choices[0].message.reasoning_content);
-    }
     
     const aiContent = responseData.choices?.[0]?.message?.content;
     if (!aiContent) {
