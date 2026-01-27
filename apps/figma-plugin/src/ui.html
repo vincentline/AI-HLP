@@ -60,6 +60,8 @@
             margin: 0;
             background-color: var(--bg-elevated);
             color: var(--text-primary);
+            height: 100%;
+            box-sizing: border-box;
         }
         
         h1 {
@@ -216,6 +218,16 @@
             margin-bottom: var(--space-5);
         }
         
+        /* 底部按钮组 */
+        .bottom-button-container {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            display: flex;
+            gap: 12px;
+        }
+        
         /* 页面样式 */
         .page {
             display: none;
@@ -223,13 +235,12 @@
         
         .page.active {
             display: block;
+            position: relative;
+            min-height: 400px;
+            padding-bottom: 80px;
         }
         
         /* API Key输入页面样式 */
-        .api-key-page {
-            margin-top: var(--space-6);
-        }
-        
         .api-key-input-wrapper {
             margin-bottom: var(--space-5);
         }
@@ -362,7 +373,7 @@
         </div>
         
         <!-- 主要按钮容器：关闭和马上重命名在同一行 -->
-        <div class="button-container">
+        <div class="bottom-button-container">
             <button id="close" class="btn-large-light" style="flex: 1;">关闭</button>
             <button id="rename" class="btn-large-secondary" style="flex: 1;">马上重命名</button>
         </div>
@@ -382,10 +393,10 @@
         
         <!-- 测试API Key按钮 -->
         <div class="button-container">
-            <button id="test-api-key" class="btn-large-secondary" style="width: 100%;">测试 API Key</button>
+            <button id="test-api-key" class="btn-large-light" style="width: 100%;">测试 API Key</button>
         </div>
         
-        <div class="button-container">
+        <div class="bottom-button-container">
             <button id="back-to-main" class="material-btn-back" style="flex: 1;">返回</button>
             <button id="save-api-key" class="btn-large-secondary" style="flex: 1;">确定</button>
         </div>

@@ -62,3 +62,5 @@
 [2026-01-27 15:00:00] 【删除文件】: scripts/git-push.ps1 - 删除有编码问题的PowerShell脚本
 [2026-01-27 15:00:00] 【删除文件】: scripts/git-push-simple.ps1 - 删除测试用的PowerShell脚本
 [2026-01-27 15:00:00] 【删除文件】: scripts/git-push.bat - 删除测试用的批处理脚本
+[2026-01-27 16:00:00] 【修改文件】: apps/figma-plugin/src/main.ts - 将插件高度从600改为500
+[2026-01-27 16:00:00] 【修改文件】: apps/figma-plugin/src/ui.html - 调整主页面和API Key页面的按钮组位置，改为距离底部24px；将测试API Key按钮样式改为浅色大按钮

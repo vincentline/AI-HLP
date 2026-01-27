@@ -6,7 +6,7 @@
 
 // 显示插件UI界面
 figma.showUI(__html__, {
-  height: 600
+  height: 500
 });
 
 // 取消标志
