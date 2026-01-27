@@ -2,20 +2,29 @@
 // 模块功能：处理Figma插件的核心逻辑，包括UI显示、消息通信和自动命名
 // 技术栈：TypeScript、Figma Plugin API
 
-// 导入Figma插件类型定义
-// @ts-ignore - Figma插件API在Figma环境中可用，TypeScript编译时会忽略
+// 使用@figma/plugin-typings提供的类型定义
 
 // 显示插件UI界面
 figma.showUI(__html__, {
   height: 600
 });
 
+// 取消标志
+let isCancelled = false;
+
 // 监听来自UI的消息
 figma.ui.onmessage = (msg: any) => {
   // 处理重命名请求
   if (msg.type === 'rename') {
+    // 重置取消标志
+    isCancelled = false;
     // 调用自动命名功能
     autoRename(msg.prompt);
+  }
+  
+  // 处理取消重命名请求
+  if (msg.type === 'cancel-rename') {
+    isCancelled = true;
   }
   
   // 处理关闭插件请求
@@ -68,15 +77,14 @@ figma.clientStorage.getAsync('huoshanApiKey').then((apiKey: string) => {
  */
 const namingConfig = {
   // 命名风格
-  style: 'semantic', // semantic, camelCase, PascalCase, kebab-case, snake_case
+  style: 'figma2code', // 切换到Figma2Code规范
   
   // 命名规范
   rules: [
-    '使用语义化名称，清晰表达元素功能',
-    '避免使用无意义的名称如 "Rectangle 1"、"Text 2" 等',
-    '根据元素类型使用相应的前缀或后缀',
-    '保持名称简洁明了，避免过长',
-    '对于重复元素，使用序号区分',
+    '切图图层必须以 ic_ (图标) 或 img_ (图片) 开头',
+    '页面状态使用正斜杠 / 建立层级',
+    '禁止使用无意义的默认名称如 "Frame 123"',
+    '整个视觉单元应统一命名',
     '使用英文命名，保持一致性'
   ],
   
@@ -84,33 +92,38 @@ const namingConfig = {
   elementRules: {
     FRAME: {
       prefix: '',
-      suffix: 'Frame',
-      example: 'HeaderFrame, ContentFrame, FooterFrame'
+      suffix: '',
+      example: 'Header, Login, Dashboard'
     },
     TEXT: {
       prefix: '',
-      suffix: 'Text',
-      example: 'TitleText, DescriptionText, ButtonText'
+      suffix: '',
+      example: 'Title, Description, ButtonText'
     },
     RECTANGLE: {
-      prefix: '',
-      suffix: 'Bg, Rectangle',
-      example: 'HeaderBg, CardRectangle'
+      prefix: 'bg_',
+      suffix: '',
+      example: 'bg_header, bg_card'
     },
     ELLIPSE: {
-      prefix: '',
-      suffix: 'Icon, Avatar',
-      example: 'UserAvatar, NotificationIcon'
+      prefix: 'ic_',
+      suffix: '',
+      example: 'ic_user, ic_notification'
+    },
+    VECTOR: {
+      prefix: 'ic_',
+      suffix: '',
+      example: 'ic_arrow, ic_check'
     },
     COMPONENT: {
       prefix: '',
-      suffix: 'Component',
-      example: 'ButtonComponent, CardComponent'
+      suffix: '',
+      example: 'Button, Card, Input'
     },
     INSTANCE: {
       prefix: '',
-      suffix: 'Instance',
-      example: 'PrimaryButtonInstance, CardInstance'
+      suffix: '',
+      example: 'PrimaryButton, CardInstance'
     }
   },
   
@@ -118,23 +131,23 @@ const namingConfig = {
   examples: [
     {
       before: 'Frame 1',
-      after: 'HeaderFrame',
-      reason: '使用语义化名称表达功能'
+      after: 'Login/Default',
+      reason: '使用层级结构表达页面状态'
     },
     {
-      before: 'Text 2',
-      after: 'TitleText',
-      reason: '根据内容类型命名'
+      before: 'Ellipse 2',
+      after: 'ic_user_icon',
+      reason: '图标使用ic_前缀'
     },
     {
       before: 'Rectangle 3',
-      after: 'BackgroundRectangle',
-      reason: '清晰表达元素用途'
+      after: 'bg_header',
+      reason: '背景使用bg_前缀'
     },
     {
-      before: 'Ellipse 4',
-      after: 'UserAvatar',
-      reason: '根据元素功能命名'
+      before: 'Frame 4',
+      after: 'img_hero_banner',
+      reason: '图片使用img_前缀'
     }
   ]
 };
@@ -145,50 +158,63 @@ const namingConfig = {
 const aiConfig = {
   // 火山AI模型配置
   huoshan: {
-    model: 'doubao-1-5-pro-32k-250115',
+    model: 'doubao-seed-1-8-251228',
     endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
     apiKey: '', // 从Figma客户端存储获取
-    version: 'v1'
+    version: 'v1',
+    // 新增请求参数配置
+    requestOptions: {
+      response_format: { "type": "json_object" },
+      temperature: 0.6,
+      top_p: 0.9,
+      max_tokens: 1500,
+      thinking: { "type": "enabled" },
+      reasoning_effort: "medium"
+    }
   },
   
   // 系统提示词
-  systemPrompt: `任务：根据输入的'画框信息数组'，按照指定格式生成对应的'命名数组'。输入：包含 Figma 画框详细信息的'画框信息数组'，以及命名格式规则'命名格式规则'。输出：符合'命名格式规则'的'命名数组'，数组长度与输入数组一致，每个元素为对应画框的命名结果。范例：'画框信息数组a'→'命名数组a'`,
+  systemPrompt: `任务：根据输入的Figma元素信息，按照Figma2Code设计规范生成标准化的命名。
+
+重要命名规范：
+1. 切图图层必须以 ic_ (图标) 或 img_ (图片) 开头
+2. 页面状态使用正斜杠 / 建立层级
+3. 禁止使用无意义的默认名称如 "Frame 123"
+4. 整个视觉单元应统一命名
+5. 使用英文命名，保持一致性
+
+输入：包含Figma元素详细信息的对象数组
+输出：符合Figma2Code规范的命名对象，键为元素ID，值为建议的名称`,
   
   // 提示词模板
-  promptTemplate: `你是一位专业的UI设计师，擅长为Figma设计元素制定规范的命名。
+  promptTemplate: `你是一位专业的UI设计师，熟悉Figma2Code设计规范。
 
-请根据以下命名规范和案例，为提供的Figma Frame结构中的元素生成合适的名称：
+请根据以下Figma2Code命名规范，为提供的Figma元素生成标准化的名称：
 
-## 命名规范
+## Figma2Code命名规范
 {{namingRules}}
-
-## 命名案例
-{{namingExamples}}
 
 ## 元素类型命名规则
 {{elementRules}}
 
-## 当前Frame结构
-{{frameStructure}}
+## 当前元素信息
+{{elementInfo}}
 
-## 用户自定义提示（可选）
-{{customPrompt}}
-
-请为每个元素生成一个合适的名称，返回格式为JSON对象，键为元素ID，值为建议的名称。
+请为每个元素生成一个符合规范的名称，返回格式为JSON对象，键为元素ID，值为建议的名称。
 
 示例返回格式：
 {
-  "elementId1": "SuggestedName1",
-  "elementId2": "SuggestedName2"
+  "elementId1": "ic_user_icon",
+  "elementId2": "img_hero_banner",
+  "elementId3": "Login/Default"
 }
 
 注意：
 1. 只返回JSON格式，不要添加任何额外的解释
-2. 保持名称简洁明了，符合命名规范
-3. 确保名称具有语义化，能够清晰表达元素的功能
-4. 避免使用无意义的数字或字母组合
-5. 对于嵌套元素，考虑其在整体结构中的位置和功能
-`
+2. 严格遵循Figma2Code命名规范
+3. 确保名称语义化且符合元素功能
+4. 对于图标使用ic_前缀，对于图片使用img_前缀
+5. 对于页面状态使用/建立层级结构`
 };
 
 /**
@@ -207,17 +233,42 @@ async function autoRename(customPrompt: string) {
       return;
     }
     
+    // 检查是否已取消
+    if (isCancelled) {
+      return;
+    }
+    
     // 获取frame结构数据
     const frameData = getFrameStructure(selectedFrame);
+    
+    // 检查是否已取消
+    if (isCancelled) {
+      return;
+    }
     
     // 构建提示词
     const prompt = buildPrompt(frameData, customPrompt);
     
+    // 检查是否已取消
+    if (isCancelled) {
+      return;
+    }
+    
     // 调用AI服务获取命名建议
     const namingSuggestions = await callAIService(prompt);
     
+    // 检查是否已取消
+    if (isCancelled) {
+      return;
+    }
+    
     // 应用命名建议
     const successCount = applyNamingSuggestions(selectedFrame, namingSuggestions);
+    
+    // 检查是否已取消
+    if (isCancelled) {
+      return;
+    }
     
     // 发送成功响应
     figma.ui.postMessage({ 
@@ -225,10 +276,13 @@ async function autoRename(customPrompt: string) {
       successCount: successCount 
     });
   } catch (error: any) {
-    figma.ui.postMessage({ 
-      type: 'error', 
-      message: `命名失败：${error.message}` 
-    });
+    // 检查是否已取消
+    if (!isCancelled) {
+      figma.ui.postMessage({ 
+        type: 'error', 
+        message: `命名失败：${error.message}` 
+      });
+    }
   }
 }
 
@@ -279,6 +333,16 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
   if ('children' in parentNode) {
     // 遍历子节点
     parentNode.children.forEach((child: SceneNode, index: number) => {
+      // 检查元素透明度是否为0
+      const hasOpacity = 'opacity' in child;
+      if (hasOpacity && child.opacity === 0) {
+        // 透明度为0的元素，不获取该节点及其子节点的任何信息
+        return;
+      }
+      
+      // 检查元素是否有导出信息
+      const hasExportInfo = 'exportSettings' in child && child.exportSettings && child.exportSettings.length > 0;
+      
       // 提取元素基本信息
       const element: any = {
         id: child.id,
@@ -291,6 +355,9 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
         y: child.y || 0,
         depth: depth, // 元素层级深度
         index: index, // 同级元素中的索引位置
+        hasExportInfo: hasExportInfo,
+        hasOpacity: hasOpacity,
+        opacity: hasOpacity ? child.opacity : 1, // 默认不透明
         style: {} // 样式信息
       };
       
@@ -298,7 +365,7 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
       switch (child.type) {
         case 'TEXT':
           const textNode = child as TextNode;
-          element.textContent = textNode.characters;
+          element.textContent = textNode.characters.length > 100 ? textNode.characters.substring(0, 100) + '...' : textNode.characters;
           element.fontSize = textNode.fontSize;
           element.style = {
             fontFamily: typeof textNode.fontName === 'object' ? textNode.fontName?.family || '' : '',
@@ -318,11 +385,9 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
         case 'STAR':
         case 'VECTOR':
           const shapeNode = child as VectorNode | RectangleNode | EllipseNode | PolygonNode | StarNode;
-          // 提取填充颜色信息
           if (Array.isArray(shapeNode.fills) && shapeNode.fills.length > 0) {
             element.fillColor = shapeNode.fills[0].type === 'SOLID' ? shapeNode.fills[0].color : null;
           }
-          // 提取样式信息
           element.style = {
             fills: shapeNode.fills,
             strokes: shapeNode.strokes,
@@ -337,16 +402,19 @@ function getElements(parentNode: SceneNode, depth: number = 0): any[] {
         case 'FRAME':
         case 'COMPONENT':
         case 'INSTANCE':
-          // 提取样式信息
           element.style = {
             backgroundColor: 'backgroundColor' in child ? child.backgroundColor : null,
             clipsContent: 'clipsContent' in child ? child.clipsContent : false,
             opacity: child.opacity,
             blendMode: child.blendMode
           };
-          // 递归处理嵌套frame和组件
-          element.children = getElements(child, depth + 1);
           break;
+      }
+      
+      // 如果元素没有导出信息，并且不是透明度为0的元素，递归处理子节点
+      if (!hasExportInfo && (hasOpacity ? child.opacity > 0 : true) && 'children' in child) {
+        // 递归处理所有子节点，包括组件内部
+        element.children = getElements(child, depth + 1);
       }
       
       // 添加到元素列表
@@ -379,16 +447,15 @@ function buildPrompt(frameData: any, customPrompt: string): string {
     )
     .join('\n\n');
   
-  // 格式化Frame结构
-  const frameStructure = JSON.stringify(frameData, null, 2);
+  // 格式化元素信息
+  const elementInfo = JSON.stringify(frameData, null, 2);
   
   // 替换提示词模板中的占位符
   let prompt = aiConfig.promptTemplate;
   prompt = prompt.replace('{{namingRules}}', `- ${namingRules}`);
   prompt = prompt.replace('{{namingExamples}}', namingExamples);
   prompt = prompt.replace('{{elementRules}}', elementRules);
-  prompt = prompt.replace('{{frameStructure}}', frameStructure);
-  prompt = prompt.replace('{{customPrompt}}', customPrompt || '无');
+  prompt = prompt.replace('{{elementInfo}}', elementInfo);
   
   return prompt;
 }
@@ -398,31 +465,28 @@ function buildPrompt(frameData: any, customPrompt: string): string {
  * @returns {Promise<boolean>} API Key是否有效
  */
 async function testApiKey(): Promise<boolean> {
-  // 获取AI配置
-  const { endpoint, apiKey, model } = aiConfig.huoshan;
+  const { endpoint, apiKey, model, requestOptions } = aiConfig.huoshan;
   
-  // 检查配置是否完整
   if (!endpoint || !apiKey) {
     return false;
   }
   
   try {
-    // 构建测试请求体
     const requestBody = {
       model: model,
       messages: [
         {
           role: "system",
-          content: "You are a helpful assistant."
+          content: "You are a helpful assistant specialized in Figma2Code design规范. Return responses in JSON format."
         },
         {
           role: "user",
-          content: "测试API Key有效性"
+          content: "测试API Key有效性，请返回简短确认信息。请以JSON格式返回，例如：{\"status\": \"success\", \"message\": \"API Key有效\"}"
         }
-      ]
+      ],
+      ...requestOptions
     };
     
-    // 发送请求
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -432,9 +496,28 @@ async function testApiKey(): Promise<boolean> {
       body: JSON.stringify(requestBody)
     });
     
-    // 检查响应状态
-    return response.ok;
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API测试错误:', response.status, response.statusText, errorText);
+      figma.ui.postMessage({ 
+        type: 'api-key-error', 
+        message: `API请求失败: ${response.status} ${response.statusText}` 
+      });
+      return false;
+    }
+    
+    const responseData = await response.json();
+    // 处理思维链内容
+    if (responseData.choices[0].message.reasoning_content) {
+      console.log('模型思考过程:', responseData.choices[0].message.reasoning_content);
+    }
+    return true;
   } catch (error: any) {
+    console.error('网络请求错误:', error.message);
+    figma.ui.postMessage({ 
+      type: 'api-key-error', 
+      message: `网络请求失败: ${error.message}` 
+    });
     return false;
   }
 }
@@ -445,17 +528,13 @@ async function testApiKey(): Promise<boolean> {
  * @returns {Promise<Object>} 命名建议
  */
 async function callAIService(prompt: string): Promise<any> {
-  // 获取AI配置
-  const { endpoint, apiKey, model } = aiConfig.huoshan;
+  const { endpoint, apiKey, model, requestOptions } = aiConfig.huoshan;
   
-  // 检查配置是否完整
   if (!endpoint || !apiKey) {
-    // 如果配置不完整，返回模拟数据
     return generateMockNamingSuggestions();
   }
   
   try {
-    // 构建请求体
     const requestBody = {
       model: model,
       messages: [
@@ -467,10 +546,10 @@ async function callAIService(prompt: string): Promise<any> {
           role: "user",
           content: prompt
         }
-      ]
+      ],
+      ...requestOptions
     };
     
-    // 发送请求
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -480,25 +559,25 @@ async function callAIService(prompt: string): Promise<any> {
       body: JSON.stringify(requestBody)
     });
     
-    // 检查响应状态
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`API请求失败: ${response.status} ${response.statusText} - ${errorText}`);
     }
     
-    // 解析响应
     const responseData = await response.json();
+    // 处理思维链内容
+    if (responseData.choices[0].message.reasoning_content) {
+      console.log('模型思考过程:', responseData.choices[0].message.reasoning_content);
+    }
     
-    // 提取AI生成的内容
     const aiContent = responseData.choices?.[0]?.message?.content;
     if (!aiContent) {
       throw new Error('AI响应格式不正确');
     }
     
-    // 解析AI生成的命名建议
     return parseAIResponse(aiContent);
   } catch (error: any) {
-    // 失败时返回模拟数据
+    console.error('AI服务调用错误:', error.message);
     return generateMockNamingSuggestions();
   }
 }
@@ -516,10 +595,16 @@ function parseAIResponse(aiContent: string): any {
     // 如果直接解析失败，尝试提取JSON部分
     const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch (parseError: any) {
+        console.error('JSON解析失败:', parseError.message);
+        return generateMockNamingSuggestions();
+      }
     }
     
     // 如果仍然解析失败，返回模拟数据
+    console.error('无法提取JSON数据:', aiContent);
     return generateMockNamingSuggestions();
   }
 }
@@ -544,8 +629,8 @@ function applyNamingSuggestions(frame: FrameNode, namingSuggestions: any): numbe
   
   // 递归应用命名建议
   function applyToNode(node: any) {
-    // 检查节点是否在命名建议中
-    if (namingSuggestions[node.id]) {
+    // 检查节点是否在命名建议中，并且不是组件类型
+    if (namingSuggestions[node.id] && node.type !== 'COMPONENT' && node.type !== 'INSTANCE') {
       // 更新节点名称
       node.name = namingSuggestions[node.id];
       successCount++;

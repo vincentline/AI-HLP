@@ -1,0 +1,86 @@
+const { AIService } = require('./index');
+
+class HuoshanAIService extends AIService {
+  constructor(config) {
+    super(config);
+    this.config = {
+      ...config,
+      baseUrl: config.baseUrl || 'https://ark.cn-beijing.volces.com/api/v3',
+      model: config.model || 'doubao-1-5-pro-32k-250115'
+    };
+  }
+
+  async call(params) {
+    const {
+      prompt,
+      model = this.config.model,
+      systemPrompt = 'You are a helpful assistant.'
+    } = params;
+
+    try {
+      const url = `${this.config.baseUrl}/chat/completions`;
+
+      const requestBody = {
+        model,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      };
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.config.apiKey}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API请求失败: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const responseData = await response.json();
+      const aiContent = responseData.choices?.[0]?.message?.content;
+
+      if (!aiContent) {
+        throw new Error('AI响应格式不正确');
+      }
+
+      return {
+        success: true,
+        data: {
+          content: aiContent,
+          fullResponse: responseData
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
+  async testApiKey() {
+    try {
+      const result = await this.call({
+        prompt: '测试API Key有效性',
+        systemPrompt: 'You are a helpful assistant.'
+      });
+      return result.success;
+    } catch (error) {
+      return false;
+    }
+  }
+}
+
+module.exports = HuoshanAIService;

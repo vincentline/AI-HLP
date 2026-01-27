@@ -264,6 +264,74 @@
             opacity: 1;
         }
         
+        /* Loading 提示样式 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(252, 252, 252, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(2px);
+        }
+        
+        .loading-content {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-md);
+            padding: var(--space-6);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            text-align: center;
+            min-width: 280px;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-light);
+            border-top: 3px solid var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--space-4);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: var(--font-size-md);
+            color: var(--text-primary);
+            margin-bottom: var(--space-4);
+        }
+        
+        .loading-cancel-btn {
+            width: 100%;
+            height: 36px;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-base);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: var(--font-size-base);
+            cursor: pointer;
+            transition: all var(--transition-base);
+        }
+        
+        .loading-cancel-btn:hover {
+            background: var(--bg-hover);
+            border-color: var(--border-medium);
+        }
+        
+        .loading-cancel-btn:active {
+            background: var(--bg-active);
+        }
+        
         /* 状态信息 */
         .status-info {
             font-size: var(--font-size-sm);
@@ -327,6 +395,15 @@
     <div class="toast-container">
         <div id="toast" class="toast-message"></div>
     </div>
+    
+    <!-- Loading 提示容器 -->
+    <div id="loading-overlay" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">正在分析和命名元素...</div>
+            <button id="loading-cancel-btn" class="loading-cancel-btn">取消</button>
+        </div>
+    </div>
 
     <script>
         // Toast 消息显示函数
@@ -338,6 +415,18 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, duration);
+        }
+        
+        // Loading 提示显示函数
+        function showLoading() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.style.display = 'flex';
+        }
+        
+        // Loading 提示隐藏函数
+        function hideLoading() {
+            const loadingOverlay = document.getElementById('loading-overlay');
+            loadingOverlay.style.display = 'none';
         }
         
         // 页面切换函数
@@ -355,7 +444,14 @@
         document.getElementById('rename').addEventListener('click', () => {
             const prompt = document.getElementById('prompt').value.trim();
             parent.postMessage({ pluginMessage: { type: 'rename', prompt } }, '*');
-            showToast('正在分析和重命名...');
+            showLoading();
+        });
+        
+        // 取消加载按钮点击事件
+        document.getElementById('loading-cancel-btn').addEventListener('click', () => {
+            parent.postMessage({ pluginMessage: { type: 'cancel-rename' } }, '*');
+            hideLoading();
+            showToast('操作已取消');
         });
 
         // 关闭按钮点击事件
@@ -420,8 +516,10 @@
             const message = event.data.pluginMessage;
             if (message) {
                 if (message.type === 'renameComplete') {
+                    hideLoading();
                     showToast(`成功命名 ${message.successCount} 个元素`);
                 } else if (message.type === 'error') {
+                    hideLoading();
                     showToast(`错误：${message.message}`, 5000);
                 } else if (message.type === 'api-key') {
                     // 设置API Key输入框的值

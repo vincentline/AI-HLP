@@ -2,6 +2,7 @@
 // 模块功能：封装各种AI服务的调用逻辑，提供统一的服务调用接口
 // 模块索引：
 //   - AIService: AI服务基础类，所有具体AI服务的父类
+//   - HuoshanAIService: 火山AI服务实现
 
 /**
  * AI服务基础类
@@ -30,6 +31,10 @@ class AIService {
   }
 }
 
+// 导入火山AI服务实现
+const HuoshanAIService = require('./huoshan');
+
 module.exports = {
-  AIService
+  AIService,
+  HuoshanAIService
 };
