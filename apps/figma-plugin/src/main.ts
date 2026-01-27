@@ -162,14 +162,11 @@ const aiConfig = {
     endpoint: 'https://ark.cn-beijing.volces.com/api/v3/chat/completions',
     apiKey: '', // 从Figma客户端存储获取
     version: 'v1',
-    // 新增请求参数配置
+    // 简化请求参数配置，移除可能不支持的参数
     requestOptions: {
-      response_format: { "type": "json_object" },
       temperature: 0.6,
       top_p: 0.9,
-      max_tokens: 1500,
-      thinking: { "type": "enabled" },
-      reasoning_effort: "medium"
+      max_tokens: 1500
     }
   },
   
@@ -413,10 +410,20 @@ function getBasicElementData(node: SceneNode): any {
 function getElements(parentNode: SceneNode, depth: number = 0): any[] {
   const elements: any[] = [];
   
+  // 检查是否已取消
+  if (isCancelled) {
+    return elements;
+  }
+  
   // 检查节点是否有children属性
   if ('children' in parentNode) {
     // 遍历子节点
     parentNode.children.forEach((child: SceneNode, index: number) => {
+      // 检查是否已取消
+      if (isCancelled) {
+        return;
+      }
+      
       // 检查元素是否应被排除
       if (isElementExcluded(child)) {
         return;
@@ -772,7 +779,7 @@ function applyNamingSuggestions(element: SceneNode, namingSuggestions: any): num
   // 递归应用命名建议
   function applyToNode(node: any) {
     // 检查节点是否在命名建议中，并且不是组件类型，也不是实例或标记为不参与命名的元素
-    if (namingSuggestions[node.id] && node.type !== 'COMPONENT' && node.type !== 'INSTANCE') {
+    if (namingSuggestions[node.id] && node.type !== 'COMPONENT' && node.type !== 'INSTANCE' && !node.excludeFromNaming) {
       // 更新节点名称
       node.name = namingSuggestions[node.id];
       successCount++;

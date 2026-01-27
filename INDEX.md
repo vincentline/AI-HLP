@@ -12,6 +12,7 @@ AI-HLP 是一个集成多种 AI 应用功能的混合项目，包含静态网页
 |---------|---------|--------|
 | `core/index.js` | 核心 AI 功能入口，统一导出所有模块 | 核心入口、模块导出 |
 | `core/services/index.js` | AI 服务集成基础类，封装 AI 服务调用逻辑 | AI 服务、服务集成、基础类 |
+| `core/services/huoshan.js` | 火山 AI 服务实现，处理与火山 API 的通信 | 火山 AI、API 通信、服务实现 |
 | `core/utils/index.js` | 通用工具函数，包括响应格式化和错误处理 | 工具函数、响应格式化、错误处理 |
 | `core/prompts/index.js` | 提示词模板管理，支持模板注册和渲染 | 提示词、模板管理、模板渲染 |
 | `core/models/index.js` | AI 模型配置管理，支持模型注册和查询 | 模型配置、模型管理、AI 模型 |
@@ -63,12 +64,16 @@ AI-HLP 是一个集成多种 AI 应用功能的混合项目，包含静态网页
 | `DEVELOPMENT_FLOW.md` | 项目开发流程文档，包含收尾流程 | 开发流程、收尾流程 |
 | `UPDATE_LOG.md` | 项目更新日志，记录每次修改操作 | 更新日志、修改记录 |
 | `CODE_STYLE.md` | 项目代码规范文档，包含缩进、命名、组织等规范 | 代码规范、命名规范、缩进规范 |
-| `GET_TIME.md` | 项目获取时间的方法指南，包含北京时间获取命令 | 时间获取、北京时间、时间戳 |
+| `Figma2Code设计规范` | Figma2Code 设计规范文档 | 设计规范、Figma2Code |
+| `Figma元素结构数组获取规则.md` | Figma 元素结构数组获取规则文档 | 元素结构、数组获取、规则 |
 | `docs/USAGE.md` | 项目使用手册 | 使用手册、文档 |
 | `docs/FIGMA_PLUGIN_PRODUCT_DOC.md` | Figma 自动命名插件产品文档，详细梳理了产品概述、核心功能、用户流程、技术实现等内容 | Figma 插件、自动命名、产品文档 |
 | `docs/` | 项目文档目录 | 文档、指南 |
 | `scripts/` | 项目脚本工具 | 脚本、工具 |
+| `scripts/GET_TIME.ps1` | PowerShell 脚本，用于获取当前北京时间 | 时间获取、北京时间、PowerShell |
 | `scripts/git-push.py` | Git 推送 Python 脚本，避免 PowerShell 编码问题 | Git 推送、Python 脚本、编码问题 |
+| `scripts/start_server.py` | 本地测试服务器启动脚本 | 测试服务器、本地开发、Python 脚本 |
+| `火山AI调用文档chat.md` | 火山 AI API 调用文档 | 火山 AI、API 调用、文档 |
 
 ## 使用说明
 
@@ -84,6 +89,6 @@ AI-HLP 是一个集成多种 AI 应用功能的混合项目，包含静态网页
 
 ## 版本信息
 
-- 索引版本：1.0.0
-- 最后更新：[2026-01-27 16:00:00]
+- 索引版本：1.0.1
+- 最后更新：[2026-01-27 18:00:00]
 - 适用项目版本：v1.0.0
