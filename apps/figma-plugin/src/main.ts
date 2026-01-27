@@ -498,7 +498,6 @@ async function testApiKey(): Promise<boolean> {
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API测试错误:', response.status, response.statusText, errorText);
       figma.ui.postMessage({ 
         type: 'api-key-error', 
         message: `API请求失败: ${response.status} ${response.statusText}` 
@@ -509,7 +508,6 @@ async function testApiKey(): Promise<boolean> {
     const responseData = await response.json();
     return true;
   } catch (error: any) {
-    console.error('网络请求错误:', error.message);
     figma.ui.postMessage({ 
       type: 'api-key-error', 
       message: `网络请求失败: ${error.message}` 
@@ -569,7 +567,6 @@ async function callAIService(prompt: string): Promise<any> {
     
     return parseAIResponse(aiContent);
   } catch (error: any) {
-    console.error('AI服务调用错误:', error.message);
     return generateMockNamingSuggestions();
   }
 }
@@ -590,13 +587,11 @@ function parseAIResponse(aiContent: string): any {
       try {
         return JSON.parse(jsonMatch[0]);
       } catch (parseError: any) {
-        console.error('JSON解析失败:', parseError.message);
         return generateMockNamingSuggestions();
       }
     }
     
     // 如果仍然解析失败，返回模拟数据
-    console.error('无法提取JSON数据:', aiContent);
     return generateMockNamingSuggestions();
   }
 }
