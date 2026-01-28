@@ -58,9 +58,8 @@ figma.ui.onmessage = (msg: any) => {
     testApiKey().then((isValid) => {
       if (isValid) {
         figma.ui.postMessage({ type: 'api-key-valid', message: 'API Key 有效' });
-      } else {
-        figma.ui.postMessage({ type: 'api-key-invalid', message: 'API Key 无效' });
       }
+      // 不再发送api-key-invalid消息，因为testApiKey函数已经发送了详细的api-key-error消息
     });
   }
 };
@@ -630,8 +629,23 @@ async function testApiKey(): Promise<boolean> {
   const { endpoint, apiKey, model, requestOptions } = aiConfig.huoshan;
   
   if (!endpoint || !apiKey) {
+    figma.ui.postMessage({ 
+      type: 'api-key-error', 
+      message: 'API Key未配置' 
+    });
     return false;
   }
+  
+  // 验证API Key格式 - 支持多种格式
+  if (!apiKey || apiKey.length < 20) {
+    figma.ui.postMessage({ 
+      type: 'api-key-error', 
+      message: 'API Key格式不正确，请检查输入' 
+    });
+    return false;
+  }
+  
+  // 不再强制要求API Key以ak-开头，因为不同服务可能有不同的API Key格式
   
   try {
     const requestBody = {
@@ -660,9 +674,27 @@ async function testApiKey(): Promise<boolean> {
     
     if (!response.ok) {
       const errorText = await response.text();
+      let errorMessage = `API请求失败: ${response.status} ${response.statusText}`;
+      
+      // 解析具体错误信息
+      try {
+        const errorData = JSON.parse(errorText);
+        if (errorData.error) {
+          if (errorData.error.code === 'Unauthorized') {
+            errorMessage = 'API Key无效或已过期';
+          } else if (errorData.error.code === 'Forbidden') {
+            errorMessage = 'API Key权限不足';
+          } else {
+            errorMessage = `API错误: ${errorData.error.message || errorData.error.code}`;
+          }
+        }
+      } catch (parseError) {
+        // 解析失败，使用原始错误信息
+      }
+      
       figma.ui.postMessage({ 
         type: 'api-key-error', 
-        message: `API请求失败: ${response.status} ${response.statusText}` 
+        message: errorMessage 
       });
       return false;
     }
@@ -670,9 +702,18 @@ async function testApiKey(): Promise<boolean> {
     const responseData = await response.json();
     return true;
   } catch (error: any) {
+    let errorMessage = `网络请求失败: ${error.message}`;
+    
+    // 处理常见网络错误
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      errorMessage = '网络连接失败，请检查网络设置';
+    } else if (error.message.includes('CORS')) {
+      errorMessage = '跨域请求失败，请检查API端点配置';
+    }
+    
     figma.ui.postMessage({ 
       type: 'api-key-error', 
-      message: `网络请求失败: ${error.message}` 
+      message: errorMessage 
     });
     return false;
   }

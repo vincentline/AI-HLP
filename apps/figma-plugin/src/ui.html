@@ -221,9 +221,9 @@
         /* 底部按钮组 */
         .bottom-button-container {
             position: absolute;
-            bottom: 24px;
-            left: 24px;
-            right: 24px;
+            bottom: 0;
+            left: 0;
+            right: 0;
             display: flex;
             gap: 12px;
         }
@@ -237,7 +237,7 @@
             display: block;
             position: relative;
             min-height: 400px;
-            padding-bottom: 80px;
+            height: 100%;
         }
         
         /* API Key输入页面样式 */
@@ -541,6 +541,8 @@
                     showToast('API Key 有效', 5000);
                 } else if (message.type === 'api-key-invalid') {
                     showToast('API Key 无效，请检查后重试', 5000);
+                } else if (message.type === 'api-key-error') {
+                    showToast(`API Key错误：${message.message}`, 5000);
                 }
             }
         };
