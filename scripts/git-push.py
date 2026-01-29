@@ -101,8 +101,7 @@ def main():
     
     # 提交
     print("\n3. 提交更改...")
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    commit_msg = f"{change_summary} - {timestamp}"
+    commit_msg = f"{change_summary}"
     print(f"提交信息: {commit_msg}")
     code, stdout, stderr = run_cmd(f"git commit -m \"{commit_msg}\"")
     if code != 0:
