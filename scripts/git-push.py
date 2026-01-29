@@ -66,10 +66,44 @@ def main():
         print(f"添加文件失败: {stderr}")
         return 1
     
+    # 生成变更描述
+    print("\n2.1 生成变更描述...")
+    code, stdout, stderr = run_cmd("git diff --name-status")
+    if code != 0:
+        print(f"获取变更信息失败: {stderr}")
+        return 1
+    
+    # 提取变更描述（不包括文件名和路径）
+    change_descriptions = []
+    for line in stdout.split('\n'):
+        if line:
+            parts = line.split('\t', 1)
+            if len(parts) == 2:
+                status = parts[0]
+                # 根据状态生成描述
+                if status == 'A':
+                    change_descriptions.append("新增文件")
+                elif status == 'M':
+                    change_descriptions.append("修改文件")
+                elif status == 'D':
+                    change_descriptions.append("删除文件")
+                elif status == 'R':
+                    change_descriptions.append("重命名文件")
+                else:
+                    change_descriptions.append("修改文件")
+    
+    # 去重并生成最终描述
+    unique_changes = list(set(change_descriptions))
+    if unique_changes:
+        change_summary = '; '.join(unique_changes)
+    else:
+        change_summary = "文件修改"
+    
     # 提交
     print("\n3. 提交更改...")
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
-    commit_msg = f"自动更新 - {timestamp}"
+    commit_msg = f"{change_summary} - {timestamp}"
+    print(f"提交信息: {commit_msg}")
     code, stdout, stderr = run_cmd(f"git commit -m \"{commit_msg}\"")
     if code != 0:
         print(f"提交失败: {stderr}")
