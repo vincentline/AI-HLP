@@ -59,53 +59,45 @@ def main():
     print("发现以下修改：")
     print(stdout)
     
-    # 添加所有修改
-    print("\n2. 添加所有修改...")
-    code, stdout, stderr = run_cmd("git add -A")
-    if code != 0:
-        print(f"添加文件失败: {stderr}")
-        return 1
-    
     # 生成变更描述
-    print("\n2.1 生成变更描述...")
-    code, stdout, stderr = run_cmd("git diff --name-status")
-    if code != 0:
-        print(f"获取变更信息失败: {stderr}")
-        return 1
-    
-    # 提取变更描述（包含文件名）
-    change_descriptions = []
+    print("\n2. 生成变更描述...")
+    # 获取所有变更的文件
+    changed_files = []
     for line in stdout.split('\n'):
         if line:
-            parts = line.split('\t', 1)
+            parts = line.split(' ', 1)
             if len(parts) == 2:
                 status = parts[0]
                 filename = parts[1]
-                # 根据状态生成描述
-                if status == 'A':
-                    change_descriptions.append(f"新增文件: {filename}")
-                elif status == 'M':
-                    # 尝试获取更详细的修改描述
-                    code, diff_output, _ = run_cmd(f"git diff --stat {filename}")
-                    if code == 0 and diff_output:
-                        # 提取修改统计信息
-                        diff_lines = diff_output.split('\n')
-                        if diff_lines:
-                            stat_info = diff_lines[0].split('|')[1].strip() if '|' in diff_lines[0] else ""
-                            if stat_info:
-                                change_descriptions.append(f"修改文件: {filename} ({stat_info})")
-                            else:
-                                change_descriptions.append(f"修改文件: {filename}")
+                changed_files.append((status, filename))
+    
+    # 生成详细描述
+    change_descriptions = []
+    for status, filename in changed_files:
+        if status.startswith('A'):
+            change_descriptions.append(f"新增文件: {filename}")
+        elif status.startswith('M'):
+            # 尝试获取修改统计
+            code, diff_output, _ = run_cmd(f"git diff --stat {filename}")
+            if code == 0 and diff_output:
+                for line in diff_output.split('\n'):
+                    if filename in line and '|' in line:
+                        stat_info = line.split('|')[1].strip()
+                        if stat_info:
+                            change_descriptions.append(f"修改文件: {filename} ({stat_info})")
                         else:
                             change_descriptions.append(f"修改文件: {filename}")
-                    else:
-                        change_descriptions.append(f"修改文件: {filename}")
-                elif status == 'D':
-                    change_descriptions.append(f"删除文件: {filename}")
-                elif status == 'R':
-                    change_descriptions.append(f"重命名文件: {filename}")
+                        break
                 else:
                     change_descriptions.append(f"修改文件: {filename}")
+            else:
+                change_descriptions.append(f"修改文件: {filename}")
+        elif status.startswith('D'):
+            change_descriptions.append(f"删除文件: {filename}")
+        elif status.startswith('R'):
+            change_descriptions.append(f"重命名文件: {filename}")
+        else:
+            change_descriptions.append(f"修改文件: {filename}")
     
     # 生成最终描述
     if change_descriptions:
@@ -113,8 +105,17 @@ def main():
     else:
         change_summary = "文件修改"
     
+    print(f"生成的变更描述: {change_summary}")
+    
+    # 添加所有修改
+    print("\n3. 添加所有修改...")
+    code, stdout, stderr = run_cmd("git add -A")
+    if code != 0:
+        print(f"添加文件失败: {stderr}")
+        return 1
+    
     # 提交
-    print("\n3. 提交更改...")
+    print("\n4. 提交更改...")
     commit_msg = f"{change_summary}"
     print(f"提交信息: {commit_msg}")
     code, stdout, stderr = run_cmd(f"git commit -m \"{commit_msg}\"")
@@ -123,7 +124,7 @@ def main():
         return 1
     
     # 拉取远程更改
-    print("\n4. 拉取远程更改...")
+    print("\n5. 拉取远程更改...")
     code, stdout, stderr = run_cmd("git pull --no-rebase origin main")
     if code != 0:
         print(f"拉取失败，尝试直接推送: {stderr}")
@@ -131,7 +132,7 @@ def main():
         print("拉取成功")
     
     # 推送
-    print("\n5. 推送到远程...")
+    print("\n6. 推送到远程...")
     code, stdout, stderr = run_cmd("git push origin main")
     if code != 0:
         print(f"推送失败: {stderr}")
