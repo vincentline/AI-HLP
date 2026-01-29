@@ -73,29 +73,43 @@ def main():
         print(f"获取变更信息失败: {stderr}")
         return 1
     
-    # 提取变更描述（不包括文件名和路径）
+    # 提取变更描述（包含文件名）
     change_descriptions = []
     for line in stdout.split('\n'):
         if line:
             parts = line.split('\t', 1)
             if len(parts) == 2:
                 status = parts[0]
+                filename = parts[1]
                 # 根据状态生成描述
                 if status == 'A':
-                    change_descriptions.append("新增文件")
+                    change_descriptions.append(f"新增文件: {filename}")
                 elif status == 'M':
-                    change_descriptions.append("修改文件")
+                    # 尝试获取更详细的修改描述
+                    code, diff_output, _ = run_cmd(f"git diff --stat {filename}")
+                    if code == 0 and diff_output:
+                        # 提取修改统计信息
+                        diff_lines = diff_output.split('\n')
+                        if diff_lines:
+                            stat_info = diff_lines[0].split('|')[1].strip() if '|' in diff_lines[0] else ""
+                            if stat_info:
+                                change_descriptions.append(f"修改文件: {filename} ({stat_info})")
+                            else:
+                                change_descriptions.append(f"修改文件: {filename}")
+                        else:
+                            change_descriptions.append(f"修改文件: {filename}")
+                    else:
+                        change_descriptions.append(f"修改文件: {filename}")
                 elif status == 'D':
-                    change_descriptions.append("删除文件")
+                    change_descriptions.append(f"删除文件: {filename}")
                 elif status == 'R':
-                    change_descriptions.append("重命名文件")
+                    change_descriptions.append(f"重命名文件: {filename}")
                 else:
-                    change_descriptions.append("修改文件")
+                    change_descriptions.append(f"修改文件: {filename}")
     
-    # 去重并生成最终描述
-    unique_changes = list(set(change_descriptions))
-    if unique_changes:
-        change_summary = '; '.join(unique_changes)
+    # 生成最终描述
+    if change_descriptions:
+        change_summary = '; '.join(change_descriptions)
     else:
         change_summary = "文件修改"
     
