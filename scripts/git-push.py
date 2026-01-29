@@ -77,21 +77,8 @@ def main():
         if status.startswith('A'):
             change_descriptions.append(f"新增文件: {filename}")
         elif status.startswith('M'):
-            # 尝试获取修改统计
-            code, diff_output, _ = run_cmd(f"git diff --stat {filename}")
-            if code == 0 and diff_output:
-                for line in diff_output.split('\n'):
-                    if filename in line and '|' in line:
-                        stat_info = line.split('|')[1].strip()
-                        if stat_info:
-                            change_descriptions.append(f"修改文件: {filename} ({stat_info})")
-                        else:
-                            change_descriptions.append(f"修改文件: {filename}")
-                        break
-                else:
-                    change_descriptions.append(f"修改文件: {filename}")
-            else:
-                change_descriptions.append(f"修改文件: {filename}")
+            # 简化描述，只保留文件名
+            change_descriptions.append(f"修改文件: {filename}")
         elif status.startswith('D'):
             change_descriptions.append(f"删除文件: {filename}")
         elif status.startswith('R'):
