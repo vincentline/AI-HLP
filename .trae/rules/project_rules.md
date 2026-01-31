@@ -8,9 +8,7 @@
    - 仓库地址：https://github.com/vincentline/AI-HLP
 
 # 项目规则
-1. 如需提交变更到 GitHub 时：
-   - 执行：`python scripts/git-push.py`
-2. 本地测试服务器使用方法：
+1. 本地测试服务器使用方法：
    - 基本用法：`python scripts/start_server.py`
    - 选择测试目录：`python scripts/start_server.py -d <目录>`
      - desktop: 测试桌面应用 (apps/desktop-app)
@@ -20,7 +18,4 @@
    - 自定义端口：`python scripts/start_server.py -p <端口>`
    - 自定义路径：`python scripts/start_server.py --path <路径>`
    - 查看帮助：`python scripts/start_server.py --help`
-3. 当用户要求发布网页时：
-  - 如果有未提交的变更，必须先提交到 GitHub，按上面GitHub提交流程提交
-  - 如果变更都提交了，把apps/static-web文件夹里的内容复制到gh-pages分支根目录，并提交到GitHub仓库的gh-pages分支
-  - 发布时，必须填写发布信息，包括发布内容等
+

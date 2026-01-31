@@ -77,7 +77,6 @@ def main():
         if status.startswith('A'):
             change_descriptions.append(f"新增文件: {filename}")
         elif status.startswith('M'):
-            # 简化描述，只保留文件名
             change_descriptions.append(f"修改文件: {filename}")
         elif status.startswith('D'):
             change_descriptions.append(f"删除文件: {filename}")
